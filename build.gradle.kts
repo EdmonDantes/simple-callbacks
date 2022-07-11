@@ -1,14 +1,17 @@
 plugins {
+    signing
     `java-library`
     `maven-publish`
     kotlin("jvm") version "1.6.10"
+    id("org.jetbrains.dokka") version "1.6.0"
 }
 
 group = "io.github.edmondantes"
-version = "0.1.0"
+version = "0.1.1"
 
-java.sourceCompatibility = JavaVersion.VERSION_11
-java.targetCompatibility = JavaVersion.VERSION_11
+java {
+    withSourcesJar()
+}
 
 repositories {
     mavenCentral()
@@ -16,7 +19,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-
     implementation("org.slf4j:slf4j-api:1.7.36")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
@@ -24,6 +26,12 @@ dependencies {
 }
 
 tasks {
+    register<Jar>("dokkaJar") {
+        from(dokkaHtml)
+        dependsOn(dokkaHtml)
+        archiveClassifier.set("javadoc")
+    }
+
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions {
             jvmTarget = "11"
@@ -33,18 +41,27 @@ tasks {
     withType<Test> {
         useJUnitPlatform()
     }
-
-    javadoc {
-        if (JavaVersion.current().isJava9Compatible) {
-            (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
-        }
-    }
 }
+
+signing {
+    val keyId = extra["signing.keyId"] as String?
+    val signingKey = extra["signing.privateKey"] as String?
+    val password = extra["signing.password"] as String?
+
+    useInMemoryPgpKeys(keyId, signingKey, password)
+
+    sign(publishing.publications)
+}
+
 
 publishing {
     repositories {
         maven {
-            url = uri((extra["maven.repository.url"] as String?).orEmpty().ifEmpty { "./build/repo" })
+            url = uri((extra["maven.repository.publish.url"] as String?).orEmpty().ifEmpty { "./build/repo" })
+            credentials {
+                username = extra["maven.repository.publish.username"] as String?
+                password = extra["maven.repository.publish.password"] as String?
+            }
         }
     }
     publications {
@@ -55,10 +72,10 @@ publishing {
                 url.set("https://github.com/EdmonDantes/simple-kotlin-callbacks")
                 developers {
                     developer {
-                        id.set((extra["maven.developer.id"] as String?).orEmpty())
                         name.set("Ilia Loginov")
                         email.set("dantes2104@gmail.com")
-                        url.set("https://github.com/EdmonDantes")
+                        organization.set("github")
+                        organizationUrl.set("https://www.github.com")
                     }
                 }
                 licenses {
@@ -76,9 +93,10 @@ publishing {
 
             groupId = "io.github.edmondantes"
             artifactId = "simple-kotlin-callbacks"
-            version = "0.1.0"
+            version = "0.1.1"
 
             from(components["java"])
+            artifact(tasks["dokkaJar"])
         }
     }
 }

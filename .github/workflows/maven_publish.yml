@@ -1,0 +1,26 @@
+name: maven publish
+
+on:
+  push:
+    branches:
+      - 'releases/**'
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '11'
+      - name: Publish
+        run: ./gradlew publish -no-daemon --no-parallel --stacktrace -Dmaven.repository.publish.url=$SONATYPE_URL_PUBLISH -Dmaven.repository.publish.username=$SONATYPE_USERNAME -Dmaven.repository.publish.password=$SONATYPE_PASSWORD -Dsigning.keyId=$SIGNING_KEY_ID -Dsigning.privateKey=$SIGNING_PRIVATE_KEY -Dsigning.password=$SIGNING_PASSWORD
+        env:
+          SONATYPE_URL_PUBLISH: ${{ secrets.SONATYPE_URL_PUBLISH }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_PRIVATE_KEY: ${{ secrets.SIGNING_PRIVATE_KEY }}
