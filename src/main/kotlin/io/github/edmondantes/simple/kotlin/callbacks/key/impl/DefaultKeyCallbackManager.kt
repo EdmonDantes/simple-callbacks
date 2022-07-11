@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
 
 class DefaultKeyCallbackManager<K, V>(
-    scheduler: ScheduledExecutorService,
+    scheduler: ScheduledExecutorService? = null,
     executor: Executor? = null
 ) : AbstractCallbackManager<V>(LOGGER, scheduler, executor), KeyCallbackStore<K, V>, KeyCallbackExecutor<K, V> {
 

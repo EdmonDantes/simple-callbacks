@@ -25,7 +25,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
 
 class DefaultCallbackManager<T>(
-    scheduler: ScheduledExecutorService,
+    scheduler: ScheduledExecutorService? = null,
     executor: Executor? = null
 ) : AbstractCallbackManager<T>(LOGGER, scheduler, executor), CallbackExecutor<T>, CallbackStore<T> {
 
