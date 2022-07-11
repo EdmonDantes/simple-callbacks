@@ -6,8 +6,10 @@ plugins {
     id("org.jetbrains.dokka") version "1.6.0"
 }
 
+val releaseVersion: String by project
+
 group = "io.github.edmondantes"
-version = "0.1.1"
+version = releaseVersion
 
 java {
     withSourcesJar()
@@ -15,6 +17,14 @@ java {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "Sonatype_releases"
+        url = uri("https://s01.oss.sonatype.org/content/repositories/releases/")
+    }
+    maven {
+        name = "Sonatype_snapshots"
+        url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+    }
 }
 
 dependencies {
@@ -41,26 +51,41 @@ tasks {
     withType<Test> {
         useJUnitPlatform()
     }
+
+    withType<PublishToMavenRepository> {
+        onlyIf {
+            project.hasProperty("sonatypeUsername") &&
+                    project.hasProperty("sonatypePassword")
+        }
+    }
+
+    withType<Sign> {
+        onlyIf {
+            project.hasProperty("signingPrivateKey") &&
+                    project.hasProperty("signingPassword")
+        }
+    }
+    whenTaskAdded {
+        if (name == "initializeSonatypeStagingRepository" &&
+            !(project.hasProperty("sonatypeUsername") && project.hasProperty("sonatypePassword"))
+        ) {
+            enabled = false
+        }
+    }
 }
-
-signing {
-    val keyId = extra["signing.keyId"] as String?
-    val signingKey = extra["signing.privateKey"] as String?
-    val password = extra["signing.password"] as String?
-
-    useInMemoryPgpKeys(keyId, signingKey, password)
-
-    sign(publishing.publications)
-}
-
 
 publishing {
     repositories {
         maven {
-            url = uri((extra["maven.repository.publish.url"] as String?).orEmpty().ifEmpty { "./build/repo" })
-            credentials {
-                username = extra["maven.repository.publish.username"] as String?
-                password = extra["maven.repository.publish.password"] as String?
+            url = uri((project.findProperty("publishRepositoryUrl") as String?).orEmpty().ifEmpty { "./build/repo" })
+
+            val username = project.findProperty("sonatypeUsername") as String?
+            val password = project.findProperty("sonatypePassword") as String?
+            if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+                credentials {
+                    this.username = username
+                    this.password = password
+                }
             }
         }
     }
@@ -93,10 +118,19 @@ publishing {
 
             groupId = "io.github.edmondantes"
             artifactId = "simple-kotlin-callbacks"
-            version = "0.1.1"
+            version = releaseVersion
 
             from(components["java"])
             artifact(tasks["dokkaJar"])
         }
     }
+}
+
+signing {
+    val keyId = findProperty("signingKeyId") as String?
+    val privateKey = findProperty("signingPrivateKey") as String?
+    val password = findProperty("signingPassword") as String?
+
+    useInMemoryPgpKeys(keyId, privateKey, password)
+    sign(publishing.publications["maven"])
 }
